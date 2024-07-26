@@ -60,6 +60,9 @@ const UserSchema = new mongoose.Schema({
     }
 
 }, { timestamps: true });
+
+
+//trước khi lưu sẽ mã hóa mật khẩu
 UserSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
         next();
@@ -68,4 +71,10 @@ UserSchema.pre('save', async function (next) {
     this.password = await bcrypt.hash(this.password, saltRounds);
 });
 
+//check mật khẩu trar về boolean
+UserSchema.methods = {
+    isCorrectPassword: async function (password) {
+        return await bcrypt.compare(password, this.password)
+    }
+}
 module.exports = mongoose.model('User', UserSchema, 'users');

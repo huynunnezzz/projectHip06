@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
+const config = require('config');
 connect().catch(err => console.log(err));
 
 async function connect() {
-    await mongoose.connect('mongodb://127.0.0.1:27017/duanhip06');
+    await mongoose.connect(config.get('db.DB_URI'));
     console.log("Kết nối database duanhip06 thành công");
 }
 
