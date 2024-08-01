@@ -9,6 +9,12 @@ module.exports = {
     },
     db: {
         DB_URI: process.env.DB_URI,
+    },
+    mail: {
+        host: process.env.MAIL_HOST,
+        port: process.env.MAIL_PORT,
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
     }
 
 }

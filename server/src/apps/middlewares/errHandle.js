@@ -4,7 +4,6 @@ const notFound = (req, res, next) => {
     next(error);
 }
 
-
 //sẽ bắt lỗi từ throw new Error('message')
 const errHandle = (error, req, res, next) => {
     const statusCode = res.statusCode === 200 ? 500 : res.statusCode;

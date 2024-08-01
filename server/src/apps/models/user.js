@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const UserSchema = new mongoose.Schema({
     fullname: {
         type: String,
@@ -54,6 +55,7 @@ const UserSchema = new mongoose.Schema({
     passwordResetToken: {
         type: String
     },
+
     //gioi han thoi gian doi mk
     passwordResetExpires: {
         type: String
@@ -75,6 +77,14 @@ UserSchema.pre('save', async function (next) {
 UserSchema.methods = {
     isCorrectPassword: async function (password) {
         return await bcrypt.compare(password, this.password)
+    },
+    // Dùng thư viện crypto-js để hash npm i crypto-js 
+    createPasswordChangedToken: function () {
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        this.passwordResetToken = crypto.createHash('SHA256').update(resetToken).digest('hex');
+        this.passwordResetExpires = Date.now() + 15 * 60 * 1000;
+        return resetToken;
     }
-}
+
+};
 module.exports = mongoose.model('User', UserSchema, 'users');

@@ -1,8 +1,10 @@
 const userModel = require('../models/user');
 const asyncHandle = require('express-async-handler');
-
+const { AccessToken, RefreshToken } = require('../middlewares/jwt');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const { sendMail } = require('../../libs/sendmail');
 //asyncHandle để thay cho try_catch
-
 const register = asyncHandle(async (req, res) => {
     const { fullname, email, phone, password } = req.body;
     if (!fullname || !email || !phone || !password) {
@@ -15,18 +17,20 @@ const register = asyncHandle(async (req, res) => {
     }
     const user = await userModel.findOne({ email });
     if (user) {
-        throw new Error('User đã được đăng ký');
+        throw new Error('User has been registered');
     } else {
         const newUser = await userModel(req.body).save();
         return res
             .status(200)
             .json({
                 success: newUser ? true : false,
-                mes: newUser ? "Đăng ký thành công" : "Đăng ký thất bại"
+                mes: newUser ? "Register success" : "Register falied"
             })
     }
 })
 
+//RefreshToken => Cấp mới Access Token
+//AccessToken => Xác thực người dùng,phân quyền người dùng
 const login = asyncHandle(async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -38,24 +42,128 @@ const login = asyncHandle(async (req, res) => {
             })
     }
     const user = await userModel.findOne({ email });
-
     //check co trong db va dung mat khau
-    if (user && await user.isCorrectPassword(password)) {
-        const { password, role, ...userData } = user.toObject();
-        return res.status(200)
-            .json({
-                success: true,
-                userData
-            })
+    if (user) {
+        if (await user.isCorrectPassword(password)) {
+            const { password, role, ...userData } = user.toObject();
+            //khoi tao Token 
+            const accessToken = AccessToken(user._id, role);
+            //Tao refreshToken vao db
+            const refreshToken = RefreshToken(user._id);
+            //Lưu refreshToken vào db
+            await userModel.findByIdAndUpdate(user._id, { refreshToken }, { new: true });
+            res.cookie('refreshToken', refreshToken, { httpOnly: true, maxAge: 3 * 24 * 60 * 60 * 1000 });
+            return res
+                .status(200)
+                .json({
+                    success: true,
+                    userData,
+                    accessToken
+                })
+        } else {
+            throw new Error('Invalid account or password')
+        }
     } else {
-        throw new Error('Đăng nhập thất bại');
+        throw new Error('Login failed');
     }
 })
 
+const current = asyncHandle(async (req, res) => {
+    const { _id } = req.user;
+    const user = await userModel.findById(_id).select('-refreshToken -password -role');
+    return res
+        .status(200)
+        .json({
+            success: user ? true : false,
+            result: user ? user : 'Notfound user'
+        })
+})
 
+const refreshToken = asyncHandle(async (req, res) => {
+    //lay token từ cookie
+    const cookie = req.cookies;
+    //check xem co token hay khong
+    if (!cookie && !cookie.refreshToken) {
+        throw new Error('No refresh token in cookies');
+    }
+    // //check token co hop le hay khong
+    jwt.verify(cookie.refreshToken, process.env.JWT_SECRET);
+    const user = await userModel.findOne({ refreshToken: cookie.refreshToken });
+    return res
+        .status(200)
+        .json({
+            success: user ? true : false,
+            newAccessToken: user ? AccessToken(user._id, user.role) : 'Refresh token not matched'
+        })
+})
+
+const logout = asyncHandle(async (req, res) => {
+    const cookie = req.cookies;
+    if (!cookie && !cookie.refreshToken) {
+        throw new Error('No refresh Token in cookies');
+    }
+    await userModel.findOneAndUpdate({ refreshToken: cookie.refreshToken }, { refreshToken: '' }, { new: true })
+    res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: true
+    });
+    return res
+        .status(200)
+        .json({
+            success: true,
+            mes: 'Logout is done'
+        })
+})
+
+const forgotPassword = asyncHandle(async (req, res) => {
+    const { email } = req.query;
+    if (!email) throw new Error('Missing Email');
+
+    const user = await userModel.findOne({ email });
+    if (!user) throw new Error('User Not found');
+    const resetToken = user.createPasswordChangedToken();
+    await user.save();
+    const html = `Xin vui lòng click vào link dưới đây để thay đổi mật khẩu của bạn.Link này sẽ hết hạn trong 15p
+                    <a href=${process.env.URL_SERVER}/api/user/reset-password/${resetToken}> Click here </a>
+                    `;
+    const result = await sendMail(email, html);
+    res
+        .status(200)
+        .json({
+            success: true,
+            result
+        })
+})
+
+const resetPassword = asyncHandle(async (req, res) => {
+    const { token } = req.params;
+    const { password } = req.body;
+    if (!password) throw new Error('Missing Inputs');
+    const passwordResetToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await userModel.findOne({ passwordResetToken, passwordResetExpires: { $gt: Date.now() } });
+    if (!user) throw new Error('Email timeout');
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    user.passwordChangedAt = Date.now();
+    await user.save();
+
+    return res
+        .status(200)
+        .json({
+            success: user ? true : false,
+            mes: user ? "Updated Password" : "Something went wrong"
+        })
+})
 
 
 module.exports = {
     register,
-    login
+    login,
+    current,
+    refreshToken,
+    logout,
+    forgotPassword,
+    resetPassword
 }
