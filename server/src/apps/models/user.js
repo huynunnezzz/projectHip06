@@ -70,18 +70,23 @@ UserSchema.pre('save', async function (next) {
         next();
     }
     const saltRounds = bcrypt.genSaltSync(10);
+    //hash password  trước khi lưu
     this.password = await bcrypt.hash(this.password, saltRounds);
 });
 
 //check mật khẩu trar về boolean
 UserSchema.methods = {
     isCorrectPassword: async function (password) {
+        //so sánh password
         return await bcrypt.compare(password, this.password)
     },
-    // Dùng thư viện crypto-js để hash npm i crypto-js 
+
+    // Dùng thư viện crypto có sẵn trong nodejs để hash 
     createPasswordChangedToken: function () {
         const resetToken = crypto.randomBytes(32).toString('hex');
+        //hash password
         this.passwordResetToken = crypto.createHash('SHA256').update(resetToken).digest('hex');
+        //giới hạnh thời gian 15p
         this.passwordResetExpires = Date.now() + 15 * 60 * 1000;
         return resetToken;
     }

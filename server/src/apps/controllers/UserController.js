@@ -4,6 +4,7 @@ const { AccessToken, RefreshToken } = require('../middlewares/jwt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendMail } = require('../../libs/sendmail');
+
 //asyncHandle để thay cho try_catch
 const register = asyncHandle(async (req, res) => {
     const { fullname, email, phone, password } = req.body;
@@ -45,14 +46,14 @@ const login = asyncHandle(async (req, res) => {
     //check co trong db va dung mat khau
     if (user) {
         if (await user.isCorrectPassword(password)) {
-            const { password, role, ...userData } = user.toObject();
+            const { password, role, refreshToken, ...userData } = user.toObject();
             //khoi tao Token 
             const accessToken = AccessToken(user._id, role);
             //Tao refreshToken vao db
-            const refreshToken = RefreshToken(user._id);
+            const newrefreshToken = RefreshToken(user._id);
             //Lưu refreshToken vào db
-            await userModel.findByIdAndUpdate(user._id, { refreshToken }, { new: true });
-            res.cookie('refreshToken', refreshToken, { httpOnly: true, maxAge: 3 * 24 * 60 * 60 * 1000 });
+            await userModel.findByIdAndUpdate(user._id, { refreshToken: newrefreshToken }, { new: true });
+            res.cookie('refreshToken', newrefreshToken, { httpOnly: true, maxAge: 3 * 24 * 60 * 60 * 1000 });
             return res
                 .status(200)
                 .json({
@@ -68,6 +69,7 @@ const login = asyncHandle(async (req, res) => {
     }
 })
 
+//trang ca nhan
 const current = asyncHandle(async (req, res) => {
     const { _id } = req.user;
     const user = await userModel.findById(_id).select('-refreshToken -password -role');
@@ -86,13 +88,14 @@ const refreshToken = asyncHandle(async (req, res) => {
     if (!cookie && !cookie.refreshToken) {
         throw new Error('No refresh token in cookies');
     }
-    // //check token co hop le hay khong
+    // //check token(id) đã lưu vào db co hop le hay khong
     jwt.verify(cookie.refreshToken, process.env.JWT_SECRET);
     const user = await userModel.findOne({ refreshToken: cookie.refreshToken });
     return res
         .status(200)
         .json({
             success: user ? true : false,
+            //tạo mới token(id,role)
             newAccessToken: user ? AccessToken(user._id, user.role) : 'Refresh token not matched'
         })
 })
@@ -115,10 +118,10 @@ const logout = asyncHandle(async (req, res) => {
         })
 })
 
+//Nhap mail de gui mail
 const forgotPassword = asyncHandle(async (req, res) => {
     const { email } = req.query;
     if (!email) throw new Error('Missing Email');
-
     const user = await userModel.findOne({ email });
     if (!user) throw new Error('User Not found');
     const resetToken = user.createPasswordChangedToken();
@@ -135,10 +138,12 @@ const forgotPassword = asyncHandle(async (req, res) => {
         })
 })
 
+//Nhap mat khau mới
 const resetPassword = asyncHandle(async (req, res) => {
     const { token } = req.params;
     const { password } = req.body;
     if (!password) throw new Error('Missing Inputs');
+
     const passwordResetToken = crypto.createHash('sha256').update(token).digest('hex');
 
     const user = await userModel.findOne({ passwordResetToken, passwordResetExpires: { $gt: Date.now() } });
@@ -157,6 +162,57 @@ const resetPassword = asyncHandle(async (req, res) => {
         })
 })
 
+const getUsers = asyncHandle(async (req, res) => {
+    const response = await userModel
+        .find()
+        .sort({ _id: -1 })
+        .select('-refreshToken -password');
+    res
+        .status(200)
+        .json({
+            status: response ? true : false,
+            users: response
+        })
+})
+
+const updateUser = asyncHandle(async (req, res) => {
+    const { _id } = req.user;
+    if (!_id || !Object.keys(req.body).length === 0) throw new Error('Missing input');
+    const response = await userModel.findByIdAndUpdate(_id, req.body, { new: true }).select('-password -role');
+    return res
+        .status(200)
+        .json({
+            status: response ? true : false,
+            updateUser: response ? response : 'Some thing went wrong',
+        })
+})
+
+
+const deleteUserbyAdmin = asyncHandle(async (req, res) => {
+    const { uid } = req.params;
+    if (!ud) throw new Error('Missing id');
+    const response = await userModel.findByIdAndDelete(uid);
+    return res
+        .status(200)
+        .json({
+            status: response ? true : false,
+            deleteUser: response ? `User with email ${response.email} deleted` : 'No user delete',
+        })
+})
+
+const updateUserbyAdmin = asyncHandle(async (req, res) => {
+    const { uid } = req.params;
+    if (!uid || !Object.keys(req.body).length === 0) throw new Error('Missing input');
+    const response = await userModel.findByIdAndUpdate(uid, req.body, { new: true }).select('-password -role');
+    return res
+        .status(200)
+        .json({
+            status: response ? true : false,
+            updateUser: response ? response : 'Some thing went wrong',
+
+        })
+})
+
 
 module.exports = {
     register,
@@ -165,5 +221,10 @@ module.exports = {
     refreshToken,
     logout,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    getUsers,
+    updateUser,
+    updateUserbyAdmin,
+    deleteUserbyAdmin
+
 }
