@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const UserController = require('../apps/controllers/UserController');
 const ProductController = require('../apps/controllers/ProductController');
+const ProductCategoryController = require('../apps/controllers/ProductCategoryController');
 const { verifyAccessToken, isAdmin } = require('../apps/middlewares/verifyToken');
 
 
@@ -31,7 +32,11 @@ router.put("/api/v2/product/update/:pid", [verifyAccessToken, isAdmin], ProductC
 router.delete("/api/v2/product/delete/:pid", [verifyAccessToken, isAdmin], ProductController.deleteProduct);
 router.put("/api/v2/product/rating/:pid", [verifyAccessToken], ProductController.ratings);
 
-
+//ProductCategory
+router.get("/api/v2/productCategory/", ProductCategoryController.getCategories);
+router.post("/api/v2/productCategory/store", [verifyAccessToken, isAdmin], ProductCategoryController.createCategory);
+router.put("/api/v2/productCategory/update/:cid", [verifyAccessToken, isAdmin], ProductCategoryController.updateCategory);
+router.delete("/api/v2/productCategory/delete/:cid", [verifyAccessToken, isAdmin], ProductCategoryController.deleteCategory);
 
 
 //CRUD | Create - Read - Update - Delete | POST - GET - PUT - DELETE

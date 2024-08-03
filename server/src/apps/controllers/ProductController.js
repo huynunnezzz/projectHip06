@@ -1,4 +1,3 @@
-const { response } = require('express');
 const productModel = require('../models/product');
 const asyncHandle = require('express-async-handler');
 const slugify = require('slugify');
@@ -9,7 +8,7 @@ const getProduct = asyncHandle(async (req, res) => {
     return res
         .status(200)
         .json({
-            status: product ? true : false,
+            status: product ? 'success' : 'failed',
             product: product ? product : 'Cannot get Product'
         })
 })
@@ -57,12 +56,15 @@ const getProducts = asyncHandle(async (req, res) => {
     //Excute query
     queryCommand.then(async (response) => {
         const counts = await productModel.find(formatedQueries).countDocuments();
+        const totalProduct = await productModel.find().countDocuments();
+        const totalPage = Math.ceil(totalProduct / limit);
         return res
             .status(200)
             .json({
-                status: response ? true : false,
+                status: response ? 'success' : 'failed',
                 products: response ? response : 'Cannot get Product',
-                counts
+                counts,
+                totalPage
             })
     })
         .catch((err) => {
@@ -74,53 +76,51 @@ const getProducts = asyncHandle(async (req, res) => {
 const createProduct = asyncHandle(async (req, res) => {
     if (Object.keys(req.body).length === 0) throw new Error('Missing inputs');
     if (req.body && req.body.title) req.body.slug = slugify(req.body.title);
-    const newProduct = await productModel(req.body).save();
+    const response = await productModel(req.body).save();
     return res
         .status(200)
         .json({
-            status: newProduct ? true : false,
-            createProduct: newProduct ? newProduct : 'Cannot create new Product'
+            status: response ? 'success' : 'failed',
+            createProduct: response ? response : 'Cannot create new Product'
         })
 })
 
 const updateProduct = asyncHandle(async (req, res) => {
     const { pid } = req.params;
     if (req.body && req.body.title) req.body.slug = slugify(req.body.title);
-    const updateProduct = await productModel.findByIdAndUpdate(pid, req.body, { new: true });
+    const response = await productModel.findByIdAndUpdate(pid, req.body, { new: true });
     return res
         .status(200)
         .json({
-            status: updateProduct ? true : false,
-            updateProduct: updateProduct ? updateProduct : 'Cannot update new Product'
+            status: response ? 'success' : 'failed',
+            updateProduct: response ? response : 'Cannot update new Product'
         })
 })
 const deleteProduct = asyncHandle(async (req, res) => {
     const { pid } = req.params;
-    console.log(pid);
-
-    const deleteProduct = await productModel.findByIdAndDelete(pid);
+    const response = await productModel.findByIdAndDelete(pid);
     return res
         .status(200)
         .json({
-            status: deleteProduct ? true : false,
-            updateProduct: deleteProduct ? 'Deleted product done' : 'Cannot delete new Product'
+            status: response ? 'success' : 'failed',
+            updateProduct: response ? 'Deleted product done' : 'Cannot delete new Product'
         })
 })
 
 const ratings = asyncHandle(async (req, res) => {
-    const { _id } = req.user;
+    const uid = req.user._id;
     const { pid } = req.params;
     const { star, comment } = req.body;
     if (!star) throw new Error('Missing Inputs');
 
     //Check xem đánh giá hay chưa nếu chưa thì thêm còn đánh giá trước đó r thì cập nhật
-
     const ratingProduct = await productModel.findById(pid);
     //tìm xem trong rating có đánh giá hay chưa
-    const alreadyRating = ratingProduct.ratings.find(el => el.postedBy.toString() === _id);
+    const alreadyRating = ratingProduct.ratings.find(el => el.postedBy.toString() === uid); // tìm comment của user trùng với uid hay không
 
     //elemMatch giống find nó sẽ chọc vào các trường của rating dấu $ sẽ so sánh xem trong đó có trường đó hay không
     if (alreadyRating) {
+        //update rating & comment
         await productModel.updateOne({
             ratings: {
                 $elemMatch: alreadyRating
@@ -132,18 +132,30 @@ const ratings = asyncHandle(async (req, res) => {
             }
         })
     } else {
+        //add rating & comment
         await productModel.findByIdAndUpdate(pid, {
             $push: {
-                ratings: { star, comment, postedBy: _id }
+                ratings: { star, comment, postedBy: uid }
             }
         }, { new: true })
 
     }
+
+    //Sum rating
+    const updateProduct = await productModel.findById(pid);
+    //Tất cả đánh giá
+    const ratingCount = updateProduct.ratings.length;
+    //tính tổng các star vd 1+2+3
+    const sumRating = updateProduct.ratings.reduce((sum, el) => sum + el.star, 0);
+
+    updateProduct.totalRatings = Math.round(sumRating * 10 / ratingCount) / 10;
+    await updateProduct.save();
     return res
         .status(200)
         .json({
-            status: true,
-            mes: "Rating done"
+            status: 'success',
+            mes: "Rating done",
+            updateProduct
         })
 
 })

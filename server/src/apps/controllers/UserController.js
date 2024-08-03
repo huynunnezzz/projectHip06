@@ -12,7 +12,7 @@ const register = asyncHandle(async (req, res) => {
         return res
             .status(400)
             .json({
-                success: false,
+                status: 'failed',
                 mes: "Missing inputs"
             })
     }
@@ -24,7 +24,7 @@ const register = asyncHandle(async (req, res) => {
         return res
             .status(200)
             .json({
-                success: newUser ? true : false,
+                status: newUser ? 'success' : 'failed',
                 mes: newUser ? "Register success" : "Register falied"
             })
     }
@@ -38,7 +38,7 @@ const login = asyncHandle(async (req, res) => {
         return res
             .status(400)
             .json({
-                success: false,
+                status: 'failed',
                 mes: "Missing inputs"
             })
     }
@@ -57,7 +57,7 @@ const login = asyncHandle(async (req, res) => {
             return res
                 .status(200)
                 .json({
-                    success: true,
+                    status: 'success',
                     userData,
                     accessToken
                 })
@@ -76,7 +76,7 @@ const current = asyncHandle(async (req, res) => {
     return res
         .status(200)
         .json({
-            success: user ? true : false,
+            status: user ? 'success' : 'failed',
             result: user ? user : 'Notfound user'
         })
 })
@@ -94,7 +94,7 @@ const refreshToken = asyncHandle(async (req, res) => {
     return res
         .status(200)
         .json({
-            success: user ? true : false,
+            status: user ? 'success' : 'failed',
             //tạo mới token(id,role)
             newAccessToken: user ? AccessToken(user._id, user.role) : 'Refresh token not matched'
         })
@@ -113,7 +113,7 @@ const logout = asyncHandle(async (req, res) => {
     return res
         .status(200)
         .json({
-            success: true,
+            status: 'success',
             mes: 'Logout is done'
         })
 })
@@ -133,7 +133,7 @@ const forgotPassword = asyncHandle(async (req, res) => {
     res
         .status(200)
         .json({
-            success: true,
+            status: 'success',
             result
         })
 })
@@ -157,7 +157,7 @@ const resetPassword = asyncHandle(async (req, res) => {
     return res
         .status(200)
         .json({
-            success: user ? true : false,
+            status: user ? 'success' : 'failed',
             mes: user ? "Updated Password" : "Something went wrong"
         })
 })
@@ -170,7 +170,7 @@ const getUsers = asyncHandle(async (req, res) => {
     res
         .status(200)
         .json({
-            status: response ? true : false,
+            status: response ? 'success' : 'failed',
             users: response
         })
 })
@@ -182,7 +182,7 @@ const updateUser = asyncHandle(async (req, res) => {
     return res
         .status(200)
         .json({
-            status: response ? true : false,
+            status: response ? 'success' : 'failed',
             updateUser: response ? response : 'Some thing went wrong',
         })
 })
@@ -195,7 +195,7 @@ const deleteUserbyAdmin = asyncHandle(async (req, res) => {
     return res
         .status(200)
         .json({
-            status: response ? true : false,
+            status: response ? 'success' : 'failed',
             deleteUser: response ? `User with email ${response.email} deleted` : 'No user delete',
         })
 })
@@ -207,7 +207,7 @@ const updateUserbyAdmin = asyncHandle(async (req, res) => {
     return res
         .status(200)
         .json({
-            status: response ? true : false,
+            status: response ? 'success' : 'failed',
             updateUser: response ? response : 'Some thing went wrong',
 
         })

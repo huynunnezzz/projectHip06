@@ -76,8 +76,9 @@ UserSchema.pre('save', async function (next) {
 
 //check mật khẩu trar về boolean
 UserSchema.methods = {
+
+    //so sánh password
     isCorrectPassword: async function (password) {
-        //so sánh password
         return await bcrypt.compare(password, this.password)
     },
 
