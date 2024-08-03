@@ -3,6 +3,7 @@ const router = express.Router();
 const UserController = require('../apps/controllers/UserController');
 const ProductController = require('../apps/controllers/ProductController');
 const ProductCategoryController = require('../apps/controllers/ProductCategoryController');
+const BlogController = require('../apps/controllers/BlogController.js');
 const { verifyAccessToken, isAdmin } = require('../apps/middlewares/verifyToken');
 
 
@@ -25,7 +26,7 @@ router.put("/api/v2/user/update/:uid", [verifyAccessToken, isAdmin], UserControl
 
 
 //Product
-router.get("/api/v2/product/:pid", ProductController.getProduct);
+router.get("/api/v2/product/:pid", ProductController.getProductbyId);
 router.get("/api/v2/product", ProductController.getProducts);
 router.post("/api/v2/product/store", [verifyAccessToken, isAdmin], ProductController.createProduct);
 router.put("/api/v2/product/update/:pid", [verifyAccessToken, isAdmin], ProductController.updateProduct);
@@ -38,6 +39,14 @@ router.post("/api/v2/productCategory/store", [verifyAccessToken, isAdmin], Produ
 router.put("/api/v2/productCategory/update/:cid", [verifyAccessToken, isAdmin], ProductCategoryController.updateCategory);
 router.delete("/api/v2/productCategory/delete/:cid", [verifyAccessToken, isAdmin], ProductCategoryController.deleteCategory);
 
+//Blog
+router.get("/api/v2/blog/", BlogController.getBlogs);
+router.get("/api/v2/blog/:bid", BlogController.getBlogbyId);
+router.post("/api/v2/blog/store", [verifyAccessToken, isAdmin], BlogController.createBlog);
+router.put("/api/v2/blog/update/:bid", [verifyAccessToken, isAdmin], BlogController.updateBlog);
+router.delete("/api/v2/blog/delete/:bid", [verifyAccessToken, isAdmin], BlogController.deleteBlog);
+router.put("/api/v2/blog/like/:bid", [verifyAccessToken], BlogController.likeBlog);
+router.put("/api/v2/blog/dislike/:bid", [verifyAccessToken], BlogController.disLikeBlog);
 
 //CRUD | Create - Read - Update - Delete | POST - GET - PUT - DELETE
 //CREATE(POST) + PUT : body

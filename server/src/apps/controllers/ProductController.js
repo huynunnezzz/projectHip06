@@ -2,7 +2,7 @@ const productModel = require('../models/product');
 const asyncHandle = require('express-async-handler');
 const slugify = require('slugify');
 
-const getProduct = asyncHandle(async (req, res) => {
+const getProductbyId = asyncHandle(async (req, res) => {
     const { pid } = req.params;
     const product = await productModel.findById(pid);
     return res
@@ -162,7 +162,7 @@ const ratings = asyncHandle(async (req, res) => {
 
 
 module.exports = {
-    getProduct,
+    getProductbyId,
     getProducts,
     createProduct,
     updateProduct,
