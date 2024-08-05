@@ -171,7 +171,8 @@ const getUsers = asyncHandle(async (req, res) => {
         .status(200)
         .json({
             status: response ? 'success' : 'failed',
-            users: response
+            mes: response ? 'Get data success' : 'Get data failed',
+            data: response ? response : 'Some thing went wrong'
         })
 })
 
@@ -183,7 +184,8 @@ const updateUser = asyncHandle(async (req, res) => {
         .status(200)
         .json({
             status: response ? 'success' : 'failed',
-            updateUser: response ? response : 'Some thing went wrong',
+            mes: response ? 'Updated success' : 'Updated failed',
+            data: response ? response : 'Some thing went wrong',
         })
 })
 
@@ -196,7 +198,7 @@ const deleteUserbyAdmin = asyncHandle(async (req, res) => {
         .status(200)
         .json({
             status: response ? 'success' : 'failed',
-            deleteUser: response ? `User with email ${response.email} deleted` : 'No user delete',
+            mes: response ? `User with email ${response.email} deleted` : 'No user delete',
         })
 })
 
@@ -208,8 +210,8 @@ const updateUserbyAdmin = asyncHandle(async (req, res) => {
         .status(200)
         .json({
             status: response ? 'success' : 'failed',
-            updateUser: response ? response : 'Some thing went wrong',
-
+            mes: response ? 'Updated success' : 'Updated failed',
+            data: response ? response : 'Some thing went wrong',
         })
 })
 

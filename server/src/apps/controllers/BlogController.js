@@ -4,6 +4,8 @@ const asyncHandle = require('express-async-handler');
 
 const getBlogs = asyncHandle(async (req, res) => {
     const response = await blogModel.find()
+        .populate('likes', '_id fullname email phone')
+        .populate('dislikes', '_id fullname email phone')
         .sort({ _id: -1 })
         .select('-isLiked -idDisliked ');
     return res
@@ -17,7 +19,9 @@ const getBlogs = asyncHandle(async (req, res) => {
 });
 const getBlogbyId = asyncHandle(async (req, res) => {
     const { bid } = req.params;
-    const response = await blogModel.findById(bid);
+    const response = await blogModel.findById(bid)
+        .populate('likes', '_id fullname email phone')
+        .populate('dislikes', '_id fullname email phone');
     return res
         .status(200)
         .json({
@@ -75,7 +79,9 @@ const likeBlog = asyncHandle(async (req, res) => {
     //check người dùng đã dislike hay chưa
     const alreadyDisliked = blog.dislikes.find(el => el.toString() === uid);
     if (alreadyDisliked) {
-        const response = await blogModel.findByIdAndUpdate(bid, { $pull: { dislikes: uid }, $push: { likes: uid } }, { new: true });
+        const response = await blogModel.findByIdAndUpdate(bid, { $pull: { dislikes: uid }, $push: { likes: uid } }, { new: true })
+            .populate('likes', '_id fullname email phone')
+            .populate('dislikes', '_id fullname email phone');
         return res
             .status(200)
             .json({
@@ -87,7 +93,9 @@ const likeBlog = asyncHandle(async (req, res) => {
     //check người dùng đã like hay chưa
     const isLiked = blog.likes.find(el => el.toString() === uid);
     if (isLiked) {
-        const response = await blogModel.findByIdAndUpdate(bid, { $pull: { likes: uid } }, { new: true });
+        const response = await blogModel.findByIdAndUpdate(bid, { $pull: { likes: uid } }, { new: true })
+            .populate('likes', '_id fullname email phone')
+            .populate('dislikes', '_id fullname email phone');
         return res
             .status(200)
             .json({
@@ -95,7 +103,9 @@ const likeBlog = asyncHandle(async (req, res) => {
                 result: response ? response : 'null'
             })
     } else {
-        const response = await blogModel.findByIdAndUpdate(bid, { $push: { likes: uid } }, { new: true });
+        const response = await blogModel.findByIdAndUpdate(bid, { $push: { likes: uid } }, { new: true })
+            .populate('likes', '_id fullname email phone')
+            .populate('dislikes', '_id fullname email phone');
         return res
             .status(200)
             .json({
@@ -112,7 +122,9 @@ const disLikeBlog = asyncHandle(async (req, res) => {
 
     const alreadyLiked = blog.likes.find(el => el.toString() === uid);
     if (alreadyLiked) {
-        const response = await blogModel.findByIdAndUpdate(bid, { $pull: { likes: uid }, $push: { dislikes: uid } }, { new: true });
+        const response = await blogModel.findByIdAndUpdate(bid, { $pull: { likes: uid }, $push: { dislikes: uid } }, { new: true })
+            .populate('likes', '_id fullname email phone')
+            .populate('dislikes', '_id fullname email phone');
 
         return res
             .status(200)
@@ -123,7 +135,9 @@ const disLikeBlog = asyncHandle(async (req, res) => {
     }
     const dislikes = blog.dislikes.find(el => el.toString() === uid);
     if (dislikes) {
-        const response = await blogModel.findByIdAndUpdate(bid, { $pull: { dislikes: uid } }, { new: true });
+        const response = await blogModel.findByIdAndUpdate(bid, { $pull: { dislikes: uid } }, { new: true })
+            .populate('likes', '_id fullname email phone')
+            .populate('dislikes', '_id fullname email phone');
         return res
             .status(200)
             .json({
@@ -131,7 +145,9 @@ const disLikeBlog = asyncHandle(async (req, res) => {
                 result: response ? response : 'null'
             })
     } else {
-        const response = await blogModel.findByIdAndUpdate(bid, { $push: { dislikes: uid } }, { new: true });
+        const response = await blogModel.findByIdAndUpdate(bid, { $push: { dislikes: uid } }, { new: true })
+            .populate('likes', '_id fullname email phone')
+            .populate('dislikes', '_id fullname email phone');
         return res
             .status(200)
             .json({

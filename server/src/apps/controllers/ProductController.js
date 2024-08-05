@@ -1,15 +1,17 @@
 const productModel = require('../models/product');
 const asyncHandle = require('express-async-handler');
+const pagnigation = require('../../libs/pagnigation');
 const slugify = require('slugify');
 
 const getProductbyId = asyncHandle(async (req, res) => {
     const { pid } = req.params;
-    const product = await productModel.findById(pid);
+    const response = await productModel.findById(pid).populate('category');
     return res
         .status(200)
         .json({
-            status: product ? 'success' : 'failed',
-            product: product ? product : 'Cannot get Product'
+            status: response ? 'success' : 'failed',
+            mes: response ? 'Get Product Success' : 'Get Product Failed',
+            data: response ? response : 'Not data'
         })
 })
 
@@ -28,6 +30,7 @@ const getProducts = asyncHandle(async (req, res) => {
 
     //Filering
     if (queries.title) formatedQueries.title = { $regex: queries.title, $options: 'i' }
+
     //Để cho chạy bất đồng bộ
     let queryCommand = productModel.find(formatedQueries);
 
@@ -36,7 +39,7 @@ const getProducts = asyncHandle(async (req, res) => {
         const sortBy = req.query.sort.split(',').join(' ');
         queryCommand = queryCommand.sort(sortBy);
     } else {
-        queryCommand = queryCommand.sort('-createdAt');
+        queryCommand = queryCommand.sort({ _id: -1 });
     }
 
     //3) Field Limiting
@@ -51,25 +54,19 @@ const getProducts = asyncHandle(async (req, res) => {
     const page = req.query.page * 1 || 1;
     const limit = req.query.limit * 1 || process.env.LIMIT_PRODUCT;
     const skip = page * limit - limit;
-    queryCommand.limit(limit).skip(skip);
+    queryCommand.populate('category').limit(limit).skip(skip);
 
     //Excute query
     queryCommand.then(async (response) => {
-        const counts = await productModel.find(formatedQueries).countDocuments();
-        const totalProduct = await productModel.find().countDocuments();
-        const totalPage = Math.ceil(totalProduct / limit);
         return res
             .status(200)
             .json({
                 status: response ? 'success' : 'failed',
-                products: response ? response : 'Cannot get Product',
-                counts,
-                totalPage
+                mes: response ? 'Get Product Success' : 'Get Product Failed',
+                data: response ? response : 'Not data',
+                pages: await pagnigation(productModel, formatedQueries, page, limit)
             })
     })
-        .catch((err) => {
-            throw new Error(err.message);
-        })
 })
 
 
@@ -81,7 +78,8 @@ const createProduct = asyncHandle(async (req, res) => {
         .status(200)
         .json({
             status: response ? 'success' : 'failed',
-            createProduct: response ? response : 'Cannot create new Product'
+            mes: response ? 'Create Product Success' : 'Create Product Failed',
+            data: response ? response : 'Not data'
         })
 })
 
@@ -93,7 +91,8 @@ const updateProduct = asyncHandle(async (req, res) => {
         .status(200)
         .json({
             status: response ? 'success' : 'failed',
-            updateProduct: response ? response : 'Cannot update new Product'
+            mes: response ? 'Update Product Success' : 'Update Product Failed',
+            data: response ? response : 'Not data'
         })
 })
 const deleteProduct = asyncHandle(async (req, res) => {
@@ -103,7 +102,7 @@ const deleteProduct = asyncHandle(async (req, res) => {
         .status(200)
         .json({
             status: response ? 'success' : 'failed',
-            updateProduct: response ? 'Deleted product done' : 'Cannot delete new Product'
+            mes: response ? 'Deleted Product Success' : 'Deleted Product Failed',
         })
 })
 
@@ -141,7 +140,8 @@ const ratings = asyncHandle(async (req, res) => {
 
     }
 
-    //Sum rating
+    //Tính trung bình rating
+
     const updateProduct = await productModel.findById(pid);
     //Tất cả đánh giá
     const ratingCount = updateProduct.ratings.length;
